@@ -36,7 +36,7 @@ export default function WaiverPage() {
   const [filter, setFilter] = useState("All");
 
   useEffect(() => {
-    fetch("http://localhost:8000/waiver")
+    fetch("https://nba-fantasy-app-production.up.railway.app/waiver")
       .then((r) => r.json())
       .then((data) => {
         setPlayers(data);

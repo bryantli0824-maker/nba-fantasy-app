@@ -73,7 +73,7 @@ export default function PlayersPage() {
     setPlayer(null);
     try {
       const res = await fetch(
-        `http://localhost:8000/player/${encodeURIComponent(query.trim())}`
+        `https://nba-fantasy-app-production.up.railway.app/player/${encodeURIComponent(query.trim())}`
       );
       if (!res.ok) {
         setError(`Player "${query}" not found. Try their full name (e.g. LeBron James).`);

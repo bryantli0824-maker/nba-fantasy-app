@@ -121,7 +121,7 @@ export default function StartSitPage() {
     setResult(null);
     try {
       const res = await fetch(
-        `http://localhost:8000/startsit?player1=${encodeURIComponent(player1.trim())}&player2=${encodeURIComponent(player2.trim())}`
+        `https://nba-fantasy-app-production.up.railway.app/startsit?player1=${encodeURIComponent(player1.trim())}&player2=${encodeURIComponent(player2.trim())}`
       );
       if (!res.ok) {
         const err = await res.json();

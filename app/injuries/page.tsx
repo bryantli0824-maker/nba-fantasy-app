@@ -39,7 +39,7 @@ export default function InjuriesPage() {
         const name = WATCH_LIST[i];
         try {
           const res = await fetch(
-            `http://localhost:8000/player/${encodeURIComponent(name)}`
+            `https://nba-fantasy-app-production.up.railway.app/player/${encodeURIComponent(name)}`
           );
           if (res.ok) {
             const d = await res.json();
