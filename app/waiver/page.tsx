@@ -162,7 +162,7 @@ export default function WaiverPage() {
                             }`}
                           >
                             {player.pts_diff > 0 ? "+" : ""}
-                            {player.pts_diff} PTS
+                            {player.pts_diff}% FG
                           </span>
                         </td>
                         <td className="px-4 py-4 text-center">

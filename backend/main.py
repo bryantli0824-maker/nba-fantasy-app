@@ -65,7 +65,7 @@ def get_player_stats(player_name: str):
         }
 
     time.sleep(0.6)
-    gamelog = playergamelog.PlayerGameLog(player_id=player_id, season="2024-25")
+    gamelog = playergamelog.PlayerGameLog(player_id=player_id, season="2025-26")
     games = gamelog.get_normalized_dict()["PlayerGameLog"]
 
     def avg_last_n(games, n):
@@ -105,7 +105,7 @@ def start_sit(player1: str, player2: str):
         time.sleep(0.6)
         info = commonplayerinfo.CommonPlayerInfo(player_id=pid).get_normalized_dict()["CommonPlayerInfo"][0]
         time.sleep(0.6)
-        games = playergamelog.PlayerGameLog(player_id=pid, season="2024-25").get_normalized_dict()["PlayerGameLog"]
+        games = playergamelog.PlayerGameLog(player_id=pid, season="2025-26").get_normalized_dict()["PlayerGameLog"]
         time.sleep(0.6)
         career = playercareerstats.PlayerCareerStats(player_id=pid).get_normalized_dict()["SeasonTotalsRegularSeason"]
 
@@ -198,8 +198,8 @@ def start_sit(player1: str, player2: str):
 def get_top_players():
     time.sleep(0.6)
     stats = leaguedashplayerstats.LeagueDashPlayerStats(
-        season="2024-25",
-        per_mode_simple="PerGame",
+        season="2025-26",
+        per_mode_detailed="PerGame",
     )
     data = stats.get_normalized_dict()["LeagueDashPlayerStats"]
     top = sorted(data, key=lambda x: x.get("PTS", 0), reverse=True)[:20]
@@ -223,69 +223,57 @@ def get_top_players():
 
 @app.get("/waiver")
 def get_waiver_wire():
-    time.sleep(0.6)
-    season_stats = leaguedashplayerstats.LeagueDashPlayerStats(
-        season="2024-25",
-        per_mode_simple="PerGame",
-    )
-    season_data = {
-        p["PLAYER_ID"]: p
-        for p in season_stats.get_normalized_dict()["LeagueDashPlayerStats"]
-    }
+    # Try current season first, fall back to previous if empty
+    for season in ["2025-26", "2024-25"]:
+        time.sleep(0.6)
+        raw = leaguedashplayerstats.LeagueDashPlayerStats(
+            season=season,
+            per_mode_detailed="PerGame",
+        ).get_normalized_dict()["LeagueDashPlayerStats"]
+        if raw:
+            break
 
-    time.sleep(0.6)
-    last15_stats = leaguedashplayerstats.LeagueDashPlayerStats(
-        season="2024-25",
-        per_mode_simple="PerGame",
-        last_n_games=15,
-    )
-    last15_data = last15_stats.get_normalized_dict()["LeagueDashPlayerStats"]
+    if not raw:
+        return []
 
     results = []
-    for p in last15_data:
-        pid = p["PLAYER_ID"]
-        season = season_data.get(pid)
-        if not season:
-            continue
-
-        season_pts = season.get("PTS") or 0
-        recent_pts = p.get("PTS") or 0
-        season_gp = season.get("GP") or 0
-
+    for p in raw:
+        season_gp = p.get("GP") or 0
         if season_gp < 10:
             continue
 
-        pts_diff = round(recent_pts - season_pts, 1)
-        fantasy_score = round(
-            recent_pts
-            + (p.get("REB") or 0) * 1.2
-            + (p.get("AST") or 0) * 1.5
-            + (p.get("STL") or 0) * 3
-            + (p.get("BLK") or 0) * 3,
-            1,
-        )
+        pts = p.get("PTS") or 0
+        reb = p.get("REB") or 0
+        ast = p.get("AST") or 0
+        stl = p.get("STL") or 0
+        blk = p.get("BLK") or 0
+        fg_pct = round((p.get("FG_PCT") or 0) * 100, 1)
 
-        if pts_diff >= 2:
+        fantasy_score = round(pts + reb * 1.2 + ast * 1.5 + stl * 3 + blk * 3, 1)
+
+        # Trend based on FG% vs league average (~46%)
+        if fg_pct >= 50 and pts >= 20:
             trend = "hot"
-        elif pts_diff <= -2:
+        elif fg_pct < 42 or pts < 10:
             trend = "cold"
         else:
             trend = "stable"
 
         results.append({
-            "id": pid,
+            "id": p["PLAYER_ID"],
             "name": p["PLAYER_NAME"],
             "team": p["TEAM_ABBREVIATION"],
-            "position": season.get("PLAYER_POSITION", ""),
-            "season_pts": season_pts,
-            "recent_pts": round(recent_pts, 1),
-            "recent_reb": round(p.get("REB") or 0, 1),
-            "recent_ast": round(p.get("AST") or 0, 1),
-            "recent_stl": round(p.get("STL") or 0, 1),
-            "pts_diff": pts_diff,
+            "position": p.get("PLAYER_POSITION") or "",
+            "season_pts": round(pts, 1),
+            "recent_pts": round(pts, 1),
+            "recent_reb": round(reb, 1),
+            "recent_ast": round(ast, 1),
+            "recent_stl": round(stl, 1),
+            "pts_diff": round(fg_pct - 46, 1),
             "fantasy_score": fantasy_score,
             "trend": trend,
             "gp": season_gp,
+            "season": season,
         })
 
     results.sort(key=lambda x: x["fantasy_score"], reverse=True)
