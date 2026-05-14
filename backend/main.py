@@ -3,12 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from nba_api.stats.endpoints import playercareerstats, commonplayerinfo, leaguedashplayerstats, playergamelog
 from nba_api.stats.static import players
 import time
+import os
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://nba-fantasy-app-one.vercel.app",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
