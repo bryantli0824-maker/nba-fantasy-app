@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface StatRow {
   gp?: number;
@@ -60,33 +61,39 @@ function StatCard({ label, data }: { label: string; data: StatRow | null }) {
   );
 }
 
-export default function PlayersPage() {
-  const [query, setQuery] = useState("");
+function PlayersPageInner() {
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function searchPlayer() {
-    if (!query.trim()) return;
+  const searchPlayer = useCallback(async (name: string) => {
+    if (!name.trim()) return;
     setLoading(true);
     setError("");
     setPlayer(null);
     try {
       const res = await fetch(
-        `https://nba-fantasy-app-production.up.railway.app/player/${encodeURIComponent(query.trim())}`
+        `https://nba-fantasy-app-production.up.railway.app/player/${encodeURIComponent(name.trim())}`
       );
       if (!res.ok) {
-        setError(`Player "${query}" not found. Try their full name (e.g. LeBron James).`);
+        setError(`Player "${name}" not found. Try their full name (e.g. LeBron James).`);
         return;
       }
       const data = await res.json();
       setPlayer(data);
     } catch {
-      setError("Could not connect to the data server. Make sure the backend is running.");
+      setError("Could not connect to the data server.");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q) searchPlayer(q);
+  }, [searchParams, searchPlayer]);
 
   return (
     <main className="min-h-screen bg-gray-950 text-white">
@@ -99,9 +106,9 @@ export default function PlayersPage() {
           </a>
           <div className="hidden md:flex items-center gap-6 text-gray-400 text-sm">
             <a href="/players" className="text-white font-semibold">Players</a>
-            <a href="#" className="hover:text-white transition">Start/Sit</a>
-            <a href="#" className="hover:text-white transition">Waiver Wire</a>
-            <a href="#" className="hover:text-white transition">Injuries</a>
+            <a href="/startsit" className="hover:text-white transition">Start/Sit</a>
+            <a href="/waiver" className="hover:text-white transition">Waiver Wire</a>
+            <a href="/injuries" className="hover:text-white transition">Injuries</a>
           </div>
         </div>
       </nav>
@@ -118,12 +125,12 @@ export default function PlayersPage() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && searchPlayer()}
+            onKeyDown={(e) => e.key === "Enter" && searchPlayer(query)}
             placeholder="Search player (e.g. LeBron James, Nikola Jokic...)"
             className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition"
           />
           <button
-            onClick={searchPlayer}
+            onClick={() => searchPlayer(query)}
             disabled={loading}
             className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-bold transition"
           >
@@ -245,5 +252,13 @@ export default function PlayersPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function PlayersPage() {
+  return (
+    <Suspense fallback={null}>
+      <PlayersPageInner />
+    </Suspense>
   );
 }
